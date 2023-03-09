@@ -10,16 +10,8 @@ import java.util.Arrays;
 
 public class BeatBot implements IBot {
     private static final String BOTNAME = "Call Me Chad.bot";
-
-    //These are the preferred moves inside a zone in order
-    private final int[][] preferredInnerMoves = {
-            {0, 0}, {2, 0},  //Top left, Top right
-            {0, 2}, {2, 2},  //Bot left, Bot right
-            {1, 1}, //Center
-            {0, 1}, {2, 1}, //Top, Bottom
-            {1, 0}, {1, 2}}; //left, Right
-
     private String[][] board;
+    private boolean checkedWithoutIgnore = false;
 
     private void fillBoard(IGameState gameState) {
         board = Arrays.stream(gameState.getField().getBoard()).map(String[]::clone).toArray(String[][]::new);
@@ -28,52 +20,136 @@ public class BeatBot implements IBot {
     private IMove localTactic(IGameState gameState, String[] localBoard, String[] ignoreTiles) {
         fillBoard(gameState);
 
+        if (getBoardMoves(localBoard) == 0) {
+            int[] preferredMoves = {
+                    0, 2, 6, 8, //corners
+                    4, //middle
+                    1, 3, 5, 7 //borders
+            }; //borders
+
+            for (int move : preferredMoves) {
+                if (checkReturn(ignoreTiles, move))
+                    return moveConverter(move);
+            }
+        }
+
         String player = "1";
         if (gameState.getMoveNumber() % 2 == 0)
             player = "0";
 
-        if (placeMiddle(localBoard, player))
+        if (placeMiddle(localBoard, player) && checkReturn(ignoreTiles, 4))
             return new Move(1, 1);
 
-        switch (checkBorders(localBoard, player)) {
-            case 1 -> {
-                if (checkReturn(ignoreTiles, 1))
-                    return new Move(0, 1); //Top
-            }
-            case 3 -> {
-                if (checkReturn(ignoreTiles, 3))
-                    return new Move(1, 0); //Left
-            }
-            case 5 -> {
-                if (checkReturn(ignoreTiles, 5))
-                    return new Move(1, 2); //Right
-            }
-            case 7 -> {
-                if (checkReturn(ignoreTiles, 7))
-                    return new Move(2, 1); //Bottom
-            }
+        enemyIsWinning(localBoard, player, ignoreTiles);
+
+        if (checkBorders(localBoard, player) != -1) {
+            return moveConverter(checkBorders(localBoard, player));
         }
 
-        switch (getOneCorner(localBoard, player)) {
+        if (getOneCorner(localBoard, player) != -1) {
+            return moveConverter(getOneCorner(localBoard, player));
+        }
+
+        if (!checkedWithoutIgnore) {
+            checkedWithoutIgnore = true;
+            return localTactic(gameState, localBoard);
+        } else {
+            checkedWithoutIgnore = false;
+            return gameState.getField().getAvailableMoves().get(0);
+        }
+
+    }
+
+    private IMove localTactic(IGameState gameState, String[] localBoard) {
+        return localTactic(gameState, localBoard, null);
+    }
+
+    private int enemyIsWinning(String[] localBoard, String player, String[] ignoredTiles) {
+        //vertical check
+        for (int i = 0; i < 3; i++) {
+            //top & mid, top & bot, mid & bot,
+            if (localBoard[i].equals(player)) {
+                if (localBoard[i + 3].equals(player) && checkReturn(ignoredTiles, i + 6))
+                    return i + 6; //counter: i + 6
+                if (localBoard[i + 6].equals(player) && checkReturn(ignoredTiles, i + 3))
+                    return i + 3; //counter: i + 3
+            }
+            if (localBoard[i + 3].equals(player) && localBoard[i + 6].equals(player) && checkReturn(ignoredTiles, i))
+                return i; //counter: i
+        }
+
+        //horizontal check [] +
+        for (int i = 0; i < 7; i += 3) {
+            if (localBoard[i].equals(player)) {
+                if (localBoard[i + 1].equals(player) && checkReturn(ignoredTiles, i + 2))
+                    return i + 2; //counter: i + 2
+                if (localBoard[i + 2].equals(player) && checkReturn(ignoredTiles, i + 1))
+                    return i + 1; //counter: i + 1
+            }
+            if (localBoard[i + 1].equals(player) && localBoard[i + 2].equals(player) && checkReturn(ignoredTiles, i))
+                return i;
+        }
+
+        //diagonal check X
+        //0, 2, 4, 6, 8
+        if (localBoard[4].equals(player)) {
+            if (localBoard[0].equals(player) && checkReturn(ignoredTiles, 8))
+                return 8; //counter: 8
+            if (localBoard[2].equals(player) && checkReturn(ignoredTiles, 6))
+                return 6; //counter: 6
+            if (localBoard[6].equals(player) && checkReturn(ignoredTiles, 2))
+                return 2;//counter: 2
+            if (localBoard[8].equals(player) && checkReturn(ignoredTiles, 0))
+                return 0;//counter: 0
+        }
+
+
+        if (localBoard[0].equals(player) && localBoard[8].equals(player) && checkReturn(ignoredTiles, 4))
+            return 4;//counter: 4
+
+        if (localBoard[2].equals(player) && localBoard[6].equals(player) && checkReturn(ignoredTiles, 4))
+            return 4; //counter: 4
+
+        return -1;
+    }
+
+    private IMove moveConverter(int move) {
+        switch (move) {
             case 0 -> {
-                if (checkReturn(ignoreTiles, 0))
-                    return new Move(0, 0); //Top Left
+                return new Move(0, 0);
+            }
+            case 1 -> {
+                return new Move(0, 1);
             }
             case 2 -> {
-                if (checkReturn(ignoreTiles, 2))
-                    return new Move(2, 0); //Top Right
+                return new Move(0, 2);
+            }
+            case 3 -> {
+                return new Move(1, 0);
+            }
+            case 4 -> {
+                return new Move(1, 1);
+            }
+            case 5 -> {
+                return new Move(1, 2);
             }
             case 6 -> {
-                if (checkReturn(ignoreTiles, 6))
-                    return new Move(0, 2); //Bottom Left
+                return new Move(2, 0);
+            }
+            case 7 -> {
+                return new Move(2, 1);
             }
             case 8 -> {
-                if (checkReturn(ignoreTiles, 8))
-                    return new Move(2, 2); //Bottom Right
+                return new Move(2, 2);
+            }
+            default -> {
+                return null;
             }
         }
+    }
 
-        return localTactic(gameState, localBoard);
+    private int enemyIsWinning(String[] localBoard, String player) {
+        return enemyIsWinning(localBoard, player);
     }
 
     private boolean checkReturn(String[] ignoredTiles, int move) {
@@ -84,9 +160,6 @@ public class BeatBot implements IBot {
         return true;
     }
 
-    private IMove localTactic(IGameState gameState, String[] localBoard) {
-        return localTactic(gameState, localBoard, null);
-    }
 
     /**
      * Checks the borders of the board to play (top, left, right and bottom)
@@ -98,7 +171,7 @@ public class BeatBot implements IBot {
      */
     private int checkBorders(String[] localBoard, String player, int ignoredBorder) {
         //checks if all borders are taken
-        if (!localBoard[2].equals(IField.AVAILABLE_FIELD) && !localBoard[4].equals(IField.AVAILABLE_FIELD) &&
+        if (!localBoard[0].equals(IField.AVAILABLE_FIELD) && !localBoard[2].equals(IField.AVAILABLE_FIELD) &&
                 !localBoard[6].equals(IField.AVAILABLE_FIELD) && !localBoard[8].equals(IField.AVAILABLE_FIELD))
             return -1;
 
@@ -192,6 +265,12 @@ public class BeatBot implements IBot {
         return false;
     }
 
+    /**
+     * Returns the number of moves made on the given board.
+     *
+     * @param receivedBoard
+     * @return
+     */
     private int getBoardMoves(String[] receivedBoard) {
         int sum = 0;
         for (String s : receivedBoard) {
@@ -202,14 +281,14 @@ public class BeatBot implements IBot {
         return sum;
     }
 
-    private Move globalTactic(IGameState gameState) {
+    private IMove globalTactic(IGameState gameState) {
         fillBoard(gameState);
         //TODO
 
         return null;
     }
 
-    private Move tacticsConnector(IGameState gameState) {
+    private IMove tacticsConnector(IGameState gameState) {
         fillBoard(gameState);
         //TODO
 
