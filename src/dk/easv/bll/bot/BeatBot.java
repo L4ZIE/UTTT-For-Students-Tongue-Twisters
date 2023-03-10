@@ -5,7 +5,7 @@ import dk.easv.bll.game.IGameState;
 import dk.easv.bll.move.IMove;
 import dk.easv.bll.move.Move;
 
-import java.util.Arrays;
+import java.util.List;
 
 
 public class BeatBot implements IBot {
@@ -14,11 +14,10 @@ public class BeatBot implements IBot {
     private boolean checkedWithoutIgnore = false;
 
     private void fillBoard(IGameState gameState) {
-        board = Arrays.stream(gameState.getField().getBoard()).map(String[]::clone).toArray(String[][]::new);
+        board = gameState.getField().getBoard();
     }
 
     private IMove localTactic(IGameState gameState, String[] localBoard, String[] ignoreTiles) {
-        fillBoard(gameState);
 
         if (getBoardMoves(localBoard) == 0) {
             int[] preferredMoves = {
@@ -29,13 +28,13 @@ public class BeatBot implements IBot {
 
             for (int move : preferredMoves) {
                 if (checkReturn(ignoreTiles, move))
-                    return moveConverter(move);
+                    return moveConverter(move, gameState);
             }
         }
 
-        String player = "1";
+        String player = "0";
         if (gameState.getMoveNumber() % 2 == 0)
-            player = "0";
+            player = "1";
 
         if (placeMiddle(localBoard, player) && checkReturn(ignoreTiles, 4))
             return new Move(1, 1);
@@ -43,11 +42,11 @@ public class BeatBot implements IBot {
         enemyIsWinning(localBoard, player, ignoreTiles);
 
         if (checkBorders(localBoard, player) != -1) {
-            return moveConverter(checkBorders(localBoard, player));
+            return moveConverter(checkBorders(localBoard, player), gameState);
         }
 
         if (getOneCorner(localBoard, player) != -1) {
-            return moveConverter(getOneCorner(localBoard, player));
+            return moveConverter(getOneCorner(localBoard, player), gameState);
         }
 
         if (!checkedWithoutIgnore) {
@@ -113,34 +112,38 @@ public class BeatBot implements IBot {
         return -1;
     }
 
-    private IMove moveConverter(int move) {
+    private IMove moveConverter(int move, IGameState gameState) {
+        List<IMove> availableMoves = gameState.getField().getAvailableMoves();
+        int boardX = availableMoves.get(0).getX();
+        int boardY = availableMoves.get(0).getY();
+
         switch (move) {
             case 0 -> {
-                return new Move(0, 0);
+                return new Move(0 + boardX, 0 + boardY);
             }
             case 1 -> {
-                return new Move(0, 1);
+                return new Move(0 + boardX, 1 + boardY);
             }
             case 2 -> {
-                return new Move(0, 2);
+                return new Move(0 + boardX, 2 + boardY);
             }
             case 3 -> {
-                return new Move(1, 0);
+                return new Move(1 + boardX, 0 + boardY);
             }
             case 4 -> {
-                return new Move(1, 1);
+                return new Move(1 + boardX, 1 + boardY);
             }
             case 5 -> {
-                return new Move(1, 2);
+                return new Move(1 + boardX, 2 + boardY);
             }
             case 6 -> {
-                return new Move(2, 0);
+                return new Move(2 + boardX, 0 + boardY);
             }
             case 7 -> {
-                return new Move(2, 1);
+                return new Move(2 + boardX, 1 + boardY);
             }
             case 8 -> {
-                return new Move(2, 2);
+                return new Move(2 + boardX, 2 + boardY);
             }
             default -> {
                 return null;
@@ -153,6 +156,9 @@ public class BeatBot implements IBot {
     }
 
     private boolean checkReturn(String[] ignoredTiles, int move) {
+        if (ignoredTiles == null)
+            return true;
+
         for (String s : ignoredTiles) {
             if (Integer.parseInt(s) == move)
                 return false;
@@ -171,32 +177,32 @@ public class BeatBot implements IBot {
      */
     private int checkBorders(String[] localBoard, String player, int ignoredBorder) {
         //checks if all borders are taken
-        if (!localBoard[0].equals(IField.AVAILABLE_FIELD) && !localBoard[2].equals(IField.AVAILABLE_FIELD) &&
-                !localBoard[6].equals(IField.AVAILABLE_FIELD) && !localBoard[8].equals(IField.AVAILABLE_FIELD))
+        if (!localBoard[0].equals(".") && !localBoard[2].equals(".") &&
+                !localBoard[6].equals(".") && !localBoard[8].equals("."))
             return -1;
 
         //checks for top play
-        if (!localBoard[0].equals(IField.AVAILABLE_FIELD) && !localBoard[0].equals(player) &&
-                !localBoard[2].equals(IField.AVAILABLE_FIELD) && !localBoard[2].equals(player))
-            if (localBoard[1].equals(IField.AVAILABLE_FIELD) && ignoredBorder != 1)
+        if (!localBoard[0].equals(".") && !localBoard[0].equals(player) &&
+                !localBoard[2].equals(".") && !localBoard[2].equals(player))
+            if (localBoard[1].equals(".") && ignoredBorder != 1)
                 return 1;
 
         //checks for left play
-        if (!localBoard[0].equals(IField.AVAILABLE_FIELD) && !localBoard[0].equals(player) &&
-                !localBoard[6].equals(IField.AVAILABLE_FIELD) && !localBoard[6].equals(player))
-            if (localBoard[3].equals(IField.AVAILABLE_FIELD) && ignoredBorder != 3)
+        if (!localBoard[0].equals(".") && !localBoard[0].equals(player) &&
+                !localBoard[6].equals(".") && !localBoard[6].equals(player))
+            if (localBoard[3].equals(".") && ignoredBorder != 3)
                 return 3;
 
         //checks for bottom play
-        if (!localBoard[8].equals(IField.AVAILABLE_FIELD) && !localBoard[8].equals(player) &&
-                !localBoard[6].equals(IField.AVAILABLE_FIELD) && !localBoard[6].equals(player))
-            if (localBoard[7].equals(IField.AVAILABLE_FIELD) && ignoredBorder != 7)
+        if (!localBoard[8].equals(".") && !localBoard[8].equals(player) &&
+                !localBoard[6].equals(".") && !localBoard[6].equals(player))
+            if (localBoard[7].equals(".") && ignoredBorder != 7)
                 return 7;
 
         //checks for right play
-        if (!localBoard[8].equals(IField.AVAILABLE_FIELD) && !localBoard[8].equals(player) &&
-                !localBoard[2].equals(IField.AVAILABLE_FIELD) && !localBoard[2].equals(player))
-            if (localBoard[5].equals(IField.AVAILABLE_FIELD) && ignoredBorder != 5)
+        if (!localBoard[8].equals(".") && !localBoard[8].equals(player) &&
+                !localBoard[2].equals(".") && !localBoard[2].equals(player))
+            if (localBoard[5].equals(".") && ignoredBorder != 5)
                 return 5;
 
         return -1;
@@ -219,31 +225,31 @@ public class BeatBot implements IBot {
     private int getOneCorner(String[] localBoard, String player, int ignoredCorner) {
 
         //checks if all corners are taken, if true, it returns -1
-        if (!localBoard[0].equals(IField.AVAILABLE_FIELD) && !localBoard[2].equals(IField.AVAILABLE_FIELD) &&
-                !localBoard[6].equals(IField.AVAILABLE_FIELD) && !localBoard[8].equals(IField.AVAILABLE_FIELD))
+        if (!localBoard[0].equals(".") && !localBoard[2].equals(".") &&
+                !localBoard[6].equals(".") && !localBoard[8].equals("."))
             return -1;
 
         //checks top left with the rest of the corners
-        if (!localBoard[0].equals(IField.AVAILABLE_FIELD) && !localBoard[0].equals(player)) {
-            if (localBoard[2].equals(IField.AVAILABLE_FIELD) && ignoredCorner != 2)
+        if (!localBoard[0].equals(".") && !localBoard[0].equals(player)) {
+            if (localBoard[2].equals(".") && ignoredCorner != 2)
                 return 2;
-            else if (localBoard[6].equals(IField.AVAILABLE_FIELD) && ignoredCorner != 6)
+            else if (localBoard[6].equals(".") && ignoredCorner != 6)
                 return 6;
-            else if (localBoard[8].equals(IField.AVAILABLE_FIELD) && ignoredCorner != 8)
+            else if (localBoard[8].equals(".") && ignoredCorner != 8)
                 return 8;
         }
 
         //checks top right with the remaining corners to be checked
-        if (!localBoard[2].equals(IField.AVAILABLE_FIELD) && !localBoard[2].equals(player)) {
-            if (localBoard[6].equals(IField.AVAILABLE_FIELD) && ignoredCorner != 6)
+        if (!localBoard[2].equals(".") && !localBoard[2].equals(player)) {
+            if (localBoard[6].equals(".") && ignoredCorner != 6)
                 return 6;
-            else if (localBoard[8].equals(IField.AVAILABLE_FIELD) && ignoredCorner != 8)
+            else if (localBoard[8].equals(".") && ignoredCorner != 8)
                 return 8;
         }
 
         //check the last corners needed to be checked
-        if (!localBoard[6].equals(IField.AVAILABLE_FIELD) && !localBoard[6].equals(player)) {
-            if (localBoard[8].equals(IField.AVAILABLE_FIELD) && ignoredCorner != 8)
+        if (!localBoard[6].equals(".") && !localBoard[6].equals(player)) {
+            if (localBoard[8].equals(".") && ignoredCorner != 8)
                 return 8;
         }
 
@@ -274,7 +280,7 @@ public class BeatBot implements IBot {
     private int getBoardMoves(String[] receivedBoard) {
         int sum = 0;
         for (String s : receivedBoard) {
-            if (!s.equals(IField.AVAILABLE_FIELD)) {
+            if (!s.equals(".")) {
                 sum++;
             }
         }
@@ -284,20 +290,17 @@ public class BeatBot implements IBot {
     private IMove globalTactic(IGameState gameState) {
         fillBoard(gameState);
         //TODO
+        List<IMove> availableMoves = gameState.getField().getAvailableMoves();
+        int boardX = availableMoves.get(0).getX();
+        int boardY = availableMoves.get(0).getY();
 
-        return null;
+        return localTactic(gameState, board[((boardX * 3) + boardY) / 3]);
     }
 
-    private IMove tacticsConnector(IGameState gameState) {
-        fillBoard(gameState);
-        //TODO
-
-        return null;
-    }
 
     @Override
     public IMove doMove(IGameState state) {
-        return null;
+        return globalTactic(state);
     }
 
     @Override
