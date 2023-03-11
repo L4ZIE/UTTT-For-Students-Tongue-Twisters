@@ -77,7 +77,39 @@ public class Scrappy implements IBot {
     }
 
     private IMove getBoardCompletionMove(String currentPlayer) {
-        //TODO
+
+        for (int i = 0; i < 3; i++) {
+            //vertical check
+            if (board[0 + boardX][i + boardY] == currentPlayer) {
+                if (board[1 + boardX][i + boardY] == currentPlayer)
+                    return new Move(2 + boardX, i + boardY);
+                if (board[2 + boardX][i + boardY] == currentPlayer)
+                    return new Move(1 + boardX, i + boardY);
+            }
+            //horizontal check
+            if (board[i + boardX][0 + boardY] == currentPlayer) {
+                if (board[i + boardX][1 + boardY] == currentPlayer)
+                    return new Move(i + boardX, 2 + boardY);
+                if (board[i + boardX][2 + boardY] == currentPlayer)
+                    return new Move(i + boardX, 1 + boardY);
+            }
+
+            //diagonal check
+            if (board[1 + boardX][1 + boardY] == currentPlayer) {
+                if (board[0 + boardX][0 + boardY] == currentPlayer)
+                    return new Move(2 + boardX, 2 + boardY);
+                if (board[2 + boardX][0 + boardY] == currentPlayer)
+                    return new Move(0 + boardX, 2 + boardY);
+                if (board[0 + boardX][2 + boardY] == currentPlayer)
+                    return new Move(2 + boardX, 0 + boardY);
+                if (board[2 + boardX][2 + boardY] == currentPlayer)
+                    return new Move(0 + boardX, 0 + boardY);
+            }
+            if ((board[0 + boardX][0 + boardY] == currentPlayer && board[2 + boardX][2 + boardY] == currentPlayer) ||
+                    (board[2 + boardX][0 + boardY] == currentPlayer && board[0 + boardX][2 + boardY] == currentPlayer))
+                return new Move(1 + boardX, 1 + boardY);
+        }
+
         return null;
     }
 
@@ -114,8 +146,8 @@ public class Scrappy implements IBot {
         }
     }
 
-    private List<IMove> checkRiskyMoves(List<IMove> availableMoves) {
-        //TODO
+    private List<IMove> checkRiskyMoves(List<IMove> availableMoves, IGameState state) {
+
 
         return null;
     }
@@ -123,7 +155,7 @@ public class Scrappy implements IBot {
 
     private IMove scrappyGlobal(IGameState state) {
         List<IMove> availableMoves = state.getField().getAvailableMoves();
-        List<IMove> ignoredMoves = checkRiskyMoves(availableMoves);
+        List<IMove> ignoredMoves = checkRiskyMoves(availableMoves, state);
         List<IMove> prioMoves = checkPrioMoves(availableMoves);
 
         return scrappyTactic(state, ignoredMoves, prioMoves);
